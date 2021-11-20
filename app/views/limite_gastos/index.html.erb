@@ -1,0 +1,123 @@
+<h1>Limite de gastos nas eleições de 2020</h1>
+
+<%= hidden_field_tag 'ufs', @ufs_array.map { |uf| [uf["sigla"]] }  %>
+<label for="uf_id" style="display: inline-block">
+UF
+</label>
+<% ufs = @ufs_array.map { |uf| [uf["nome"], uf["sigla"]] } %>
+<%= select_tag(:uf_id, options_for_select(ufs)) %>
+<button id="gerarRelatorio" class="btnAction">Gerar relatorio</button>
+<button id="gerarRelatorioTodasUfs" class="btnAction">Gerar para todas as UFs</button>
+
+<div id="tabelaGastos" style="width: 100%; margin-top: 10px;"></div>
+
+<script type="text/javascript">
+  const btnGerarRelatorio = document.querySelector('#gerarRelatorio');
+  const btnGerarRelatorioTodasUfs = document.querySelector('#gerarRelatorioTodasUfs');
+
+  const setLoading = (loading, elTabelaGastos) => {
+    const btnsAction = document.querySelectorAll('.btnAction');
+    if (loading) {
+      tabelaGastos.innerHTML = '<span>Carregando...</span>';
+    }
+    btnsAction.forEach((btn) => btn.disabled = loading);
+  };
+
+  const toMoneyValue = (valor) => {
+    return (valor || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 , style: 'currency', currency: 'BRL' });
+  };
+
+  const createTableRel = (json) => `
+    <table style="width: 100%; cursor: initial;">
+      <thead>
+        <tr>
+          <th>UF</th>
+          <th colspan="2">Municipio</th>
+          <th>Cargo</th>
+          <th colspan="4">Gastos 1º turno</th>
+          <th colspan="4">Gastos 2º turno</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        ${json.map((gasto) => `
+          <tr>
+            <td>${gasto.sgUeSuperior}</td>
+            <td colspan="2">${gasto.nmUe}</td>
+            <td>${gasto.dsCargo}</td>
+            <td colspan="4">${toMoneyValue(gasto.vrLimite1T)}</td>
+            <td colspan="4">${toMoneyValue(gasto.vrLimite2T)}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+
+  const handleClickBtnGerarRelatorio = () => {
+    const tabelaGastos = document.querySelector('#tabelaGastos');
+    setLoading(true, tabelaGastos);
+    const selectUf = document.querySelector('#uf_id');
+    fetch(`http://localhost:3000/generate_rel_by_uf?uf=` + selectUf.value)
+      .then((res) => res.json())
+      .then((json) => {
+        const htmlRel = createTableRel(json);
+        tabelaGastos.innerHTML = htmlRel;
+      })
+      .catch(() => {
+        tabelaGastos.innerHTML = '<span>Erro ao carregar dados. Por favor, tente novamente.</span>';
+      })
+      .finally(() => setLoading(false));
+  };
+
+  const openCollapse = (ev) => {
+    const div = ev.path.find((item) => item.localName === 'div' && item.className.includes("collapse"));
+    const collapseItem = div.querySelector('.collapse-item');
+    if (collapseItem) {
+      const oldDisplay = collapseItem.style.display;
+      document.querySelectorAll('.collapse').forEach((collapse) => {
+        collapse.querySelector('.collapse-item').style.display = 'none';
+      });
+      if (oldDisplay === 'none') {
+        collapseItem.style.display = 'block';
+        window.scrollTo({
+          top: div.offsetTop,
+          behavior: 'smooth',
+        });
+      }
+    }
+  };
+
+  const createCollapse = (uf, gastos) => `
+    <div class="collapse" style="border: 1px solid #ccc; padding: 10px; margin: 3px; cursor: pointer;">
+      <p style="display: flex; justify-content: space-between; margin: 0;">
+        <span>UF: ${uf} - Total de registros: ${gastos.length}</span>
+        <span>></span>
+      </p>
+      <div class="collapse-item" style="display: none">
+        ${createTableRel(gastos)}
+      </div>
+    </div>
+  `;
+
+  const handleClickBtnGerarRelatorioTodasUfs = () => {
+    const ufs = document.querySelector('#ufs');
+    if (window.confirm("Essa é uma operação lenta, você tem certeza?")) {
+      const tabelaGastos = document.querySelector('#tabelaGastos');
+      setLoading(true, tabelaGastos);
+      fetch('http://localhost:3000/generate_rel?ufs=' + ufs.value.split(' '))
+        .then((res) => res.json())
+        .then((json) => {
+          const htmlRel = json.map(([uf, gastos]) => createCollapse(uf, gastos)).join("");
+          tabelaGastos.innerHTML = htmlRel;
+          document.querySelectorAll('.collapse').forEach((collapse) => collapse.addEventListener('click', openCollapse));
+        })
+        .catch(() => {
+          tabelaGastos.innerHTML = '<span>Erro ao carregar dados. Por favor, tente novamente.</span>';
+        })
+        .finally(() => setLoading(false));
+    }
+  };
+
+  btnGerarRelatorio.addEventListener('click', handleClickBtnGerarRelatorio);
+  btnGerarRelatorioTodasUfs.addEventListener('click', handleClickBtnGerarRelatorioTodasUfs);
+</script>

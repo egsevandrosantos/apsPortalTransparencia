@@ -1,5 +1,5 @@
-require_relative '../http/services/ufs';
-require_relative '../http/services/limite_de_gastos';
+require "#{Rails.root}/app/http/services/ufs";
+require "#{Rails.root}/app/http/services/limite_de_gastos";
 
 class LimiteGastosController < ApplicationController
   def index

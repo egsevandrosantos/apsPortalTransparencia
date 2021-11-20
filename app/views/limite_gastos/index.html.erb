@@ -57,7 +57,7 @@ UF
     const tabelaGastos = document.querySelector('#tabelaGastos');
     setLoading(true, tabelaGastos);
     const selectUf = document.querySelector('#uf_id');
-    fetch(`http://localhost:3000/generate_rel_by_uf?uf=` + selectUf.value)
+    fetch(`${window.location.origin}/generate_rel_by_uf?uf=${selectUf.value}`)
       .then((res) => res.json())
       .then((json) => {
         const htmlRel = createTableRel(json);
@@ -104,7 +104,7 @@ UF
     if (window.confirm("Essa é uma operação lenta, você tem certeza?")) {
       const tabelaGastos = document.querySelector('#tabelaGastos');
       setLoading(true, tabelaGastos);
-      fetch('http://localhost:3000/generate_rel?ufs=' + ufs.value.split(' '))
+      fetch(`${window.location.origin}/generate_rel?ufs=${ufs.value.split(' ')}`)
         .then((res) => res.json())
         .then((json) => {
           const htmlRel = json.map(([uf, gastos]) => createCollapse(uf, gastos)).join("");
